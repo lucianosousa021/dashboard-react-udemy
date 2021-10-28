@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 
 export const Container = styled.div``
-export const Content = styled.div`
+export const Content = styled.main`
     display: flex;
     flex-direction: column;
 `
@@ -19,9 +19,10 @@ export const Filters = styled.div`
         color: ${props => props.theme.colors.white};
         margin: 0 10px;
         transition: opacity 0.3s;
+        opacity: 0.5;
 
         &:hover{
-            opacity: 0.7;   
+            opacity: 0.7;
         }
 
         &:nth-child(1):after{
@@ -38,5 +39,9 @@ export const Filters = styled.div`
             width: 55px;
             border-bottom: 10px solid ${props => props.theme.colors.success}
         }
+    }
+
+    .tag-actived{
+        opacity: 1;
     }
 `

@@ -8,6 +8,11 @@ import { Container, Content, Filters } from './style'
 
 import gains from '../../repositories/gains'
 import expenses from '../../repositories/expenses'
+import monthsList from '../../utils/months'
+
+import formatCurrency from '../../utils/formatCurrency'
+import formatDate from '../../utils/formatDate'
+
 
 interface RouteParams {
     match: {
@@ -29,6 +34,10 @@ const List: React.FC<RouteParams> = ( { match } ) => {
 
     const [data, setData] = useState<Data[]>([])
 
+    const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() +1))
+    const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()))
+    const [selectedFrequency, setSelectedFrequency] = useState<string[]>(['recorrente', 'eventual'])
+
     const { type } = match.params
 
     const title = useMemo(() => {
@@ -41,63 +50,98 @@ const List: React.FC<RouteParams> = ( { match } ) => {
         }
     }, [type])
 
-    const months = [
-        {value: 1, label: 'Janeiro'},
-        {value: 2, label: 'Fevereiro'},
-        {value: 3, label: 'Março'},
-        {value: 4, label: 'Abril'},
-        {value: 5, label: 'Maio'},
-        {value: 6, label: 'Junho'},
-        {value: 7, label: 'Julho'},
-        {value: 8, label: 'Agosto'},
-        {value: 9, label: 'Setembro'},
-        {value: 10, label: 'Outubro'},
-        {value: 11, label: 'Novembro'},
-        {value: 12, label: 'Dezembro'},
-]
-
-    const years = [
-        {value: 2021, label: 2021},
-        {value: 2020, label: 2020},
-        {value: 2019, label: 2019},
-        {value: 2018, label: 2018},
-    ]
 
     const listData = useMemo(() => {
         return type === 'entry-balance' ? gains : expenses
+    }, [type])
+
+
+    const years = useMemo(() => {
+        let uniqueYears: number[] = []
+
+        listData.forEach(item => {
+            const date = new Date(item.date)
+            const year = date.getFullYear()
+
+            if (!uniqueYears.includes(year)){
+                uniqueYears.push(year)
+            }
+        })
+
+        return uniqueYears.map(year => {
+            return {
+                value: year,
+                label: year
+            }
+        })
+
+    }, [listData])
+
+
+    const months = useMemo(() => {
+        return monthsList.map((month, index) => {
+            return {
+                value: index + 1,
+                label: month
+            }
+        })
+
     }, [])
 
     useEffect(() => {
-        const response = listData.map(item => {
+        console.log(selectedMonth)
+        console.log(selectedYear)
+        const filteredData = listData.filter(item => {
+            const date = new Date(item.date)
+            const month = String(date.getMonth() + 1)
+            const year = String(date.getFullYear())
+
+            return month === selectedMonth && year === selectedYear && selectedFrequency.includes(item.frequency)
+        })
+
+        const formattedData = filteredData.map(item => {
             return {
                 description: item.description,
-                amountFormatted: item.amount,
+                amountFormatted: formatCurrency(Number(item.amount))    ,
                 frequency: item.frequency,
-                dateFormatted: item.date,
+                dateFormatted: formatDate(item.date),
                 tagColor: item.frequency === 'recorrente' ? '#e44c4e' : '#4e41f0'
             }
         })
-        setData(response)
-    }, [])
+        setData(formattedData)
+    }, [listData, selectedMonth, selectedYear, selectedFrequency])
+
+    const handleFrequencyClick = (frequency: string) => {
+        const alreadySelected = selectedFrequency.findIndex(item => item === frequency)
+
+        if (alreadySelected >= 0){
+            const filtered = selectedFrequency.filter(item => item !== frequency)
+            setSelectedFrequency(filtered)
+        }else{
+            setSelectedFrequency((prev) => [...prev, frequency])
+        }
+    }
 
     return (
         <Container>
             <ContentHeader title={title.text} lineColor={title.lineColor}>
-                <SelectInput options={months} />
-                <SelectInput options={years} />
+                <SelectInput options={months} onChange={e => setSelectedMonth(e.target.value)} defaultValue={selectedMonth} />
+                <SelectInput options={years} onChange={e => setSelectedYear(e.target.value)} defaultValue={selectedYear}/>
             </ContentHeader>
 
             <Filters>
                 <button
                     type="button"
-                    className="tag-filter"
+                    className={`tag-filter ${selectedFrequency.includes('recorrente') && 'tag-actived'}`}
+                    onClick={() => handleFrequencyClick('recorrente')}
                 >
                     Recorrentes
                 </button>
 
                 <button
                     type="button"
-                    className="tag-filter"
+                    className={`tag-filter ${selectedFrequency.includes('eventual') && 'tag-actived'}`}
+                    onClick={() => handleFrequencyClick('eventual')}
                 >
                     Eventuais
                 </button>
